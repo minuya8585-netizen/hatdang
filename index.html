@@ -910,15 +910,25 @@ body {
 
         <!-- 태그 선택 -->
         <div class="card">
-          <div class="card-label">🏷 태그 선택</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px" id="tagArea">
-            <button class="loc-btn" onclick="toggleTag(this,'#카페')">☕ 카페</button>
-            <button class="loc-btn" onclick="toggleTag(this,'#식당')">🍽 식당</button>
-            <button class="loc-btn" onclick="toggleTag(this,'#데이트')">💑 데이트</button>
-            <button class="loc-btn" onclick="toggleTag(this,'#혼자')">🚶 혼자</button>
-            <button class="loc-btn" onclick="toggleTag(this,'#분위기맛집')">✨ 분위기</button>
-            <button class="loc-btn" onclick="toggleTag(this,'#재방문')">🔁 재방문</button>
+          <div class="card-label">🏷 태그</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px" id="tagArea">
+            <button class="loc-btn" onclick="toggleTag(this,'#카페')">☕ #카페</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#식당')">🍽 #식당</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#데이트')">💑 #데이트</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#혼자')">🚶 #혼자</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#분위기맛집')">✨ #분위기맛집</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#재방문')">🔁 #재방문</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#숨은맛집')">🗺 #숨은맛집</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#가성비')">💰 #가성비</button>
           </div>
+          <!-- 직접 입력 -->
+          <div style="display:flex;gap:8px">
+            <input id="tagInp" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:13px;font-family:inherit;outline:none;background:var(--bg)" placeholder="#태그 직접 입력 후 Enter"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag()}">
+            <button onclick="addCustomTag()" style="padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-family:inherit;cursor:pointer">추가</button>
+          </div>
+          <!-- 선택된 태그 표시 -->
+          <div id="selectedTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
         </div>
 
         <!-- 메모 -->
@@ -1435,12 +1445,52 @@ function selectPlace(lat, lng, addr, name) {
 }
 window.selectPlace = selectPlace;
 
-/* ═══ 태그 토글 ═══ */
+/* ═══ 태그 ═══ */
 function toggleTag(btn, tag) {
   const idx = selectedTags.indexOf(tag);
-  if (idx === -1) { selectedTags.push(tag); btn.classList.add('on'); }
-  else { selectedTags.splice(idx, 1); btn.classList.remove('on'); }
+  if (idx === -1) {
+    selectedTags.push(tag);
+    btn.classList.add('on');
+  } else {
+    selectedTags.splice(idx, 1);
+    btn.classList.remove('on');
+  }
+  renderSelectedTags();
 }
+
+function addCustomTag() {
+  const inp = document.getElementById('tagInp');
+  let tag = inp.value.trim();
+  if (!tag) return;
+  if (!tag.startsWith('#')) tag = '#' + tag;
+  if (selectedTags.includes(tag)) { showToast('이미 추가된 태그야!'); inp.value = ''; return; }
+  selectedTags.push(tag);
+  inp.value = '';
+  renderSelectedTags();
+}
+
+function removeTag(tag) {
+  const idx = selectedTags.indexOf(tag);
+  if (idx !== -1) selectedTags.splice(idx, 1);
+  // 추천 태그 버튼도 off로
+  document.querySelectorAll('#tagArea .loc-btn').forEach(b => {
+    if (b.getAttribute('onclick')?.includes(tag)) b.classList.remove('on');
+  });
+  renderSelectedTags();
+}
+
+function renderSelectedTags() {
+  const wrap = document.getElementById('selectedTags');
+  if (!selectedTags.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = selectedTags.map(t =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--primary-soft);color:var(--primary);border:1px solid var(--primary);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">
+      ${t}
+      <span onclick="removeTag('${t}')" style="cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</span>
+    </span>`
+  ).join('');
+}
+window.addCustomTag = addCustomTag;
+window.removeTag = removeTag;
 
 /* ═══ 분석 시작 ═══ */
 function startAnalysis() {
@@ -1634,6 +1684,7 @@ async function saveMemory() {
     document.getElementById('ubox').classList.remove('has-img');
     selectedTags = [];
     document.querySelectorAll('#tagArea .loc-btn').forEach(b => b.classList.remove('on'));
+    document.getElementById('selectedTags').innerHTML = '';
     imgB64 = null;
 
     showToast(`🎉 기억 저장 완료! +${bonus}P 적립됐어`);
