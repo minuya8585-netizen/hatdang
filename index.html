@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="햇당">
+<meta name="application-name" content="햇당">
+<meta name="theme-color" content="#FF6B35">
+<meta name="description" content="넌 찍기만 해, 기억은 내가 할게 — 초개인화 기억 보조 비서">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>햇당 ☀️</title>
+<script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=oqbpawzg0f&submodules=geocoder"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+/* ─── 토큰 ─── */
+:root {
+  --bg:          #FFFBF5;
+  --surface:     #FFFFFF;
+  --primary:     #FF6B35;
+  --primary-d:   #E55A28;
+  --primary-soft:#FFF0EA;
+  --accent:      #FFB347;
+  --accent-soft: #FFF8EE;
+  --text:        #1A1A1A;
+  --sub:         #888888;
+  --border:      #F0EAE0;
+  --success:     #4CAF50;
+  --r:           20px;
+  --rs:          12px;
+  --nav-h:       64px;
+  --safe-b:      env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── 리셋 ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ─── 앱 셸 ─── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  background: var(--bg);
+  box-shadow: 0 0 40px rgba(0,0,0,.08);
+}
+
+/* ─── 상단 헤더 ─── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 10;
+}
+.logo {
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 22px;
+  color: var(--primary);
+  letter-spacing: -0.5px;
+}
+.logo .dot { color: var(--accent); }
+.ghost-btn {
+  font-size: 11px;
+  color: var(--sub);
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.ghost-btn.active {
+  background: #1A1A1A;
+  color: #888;
+  border-color: #1A1A1A;
+}
+.ghost-btn.active::before { content: '👻 '; }
+
+/* ─── 페이지 컨테이너 ─── */
+#pages {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 12px);
+  display: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.page.active {
+  display: block;
+  opacity: 1;
+}
+
+/* ─── 바텀 네비 ─── */
+#nav {
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-b);
+  flex-shrink: 0;
+  z-index: 10;
+}
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 0 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.nav-btn .ico { font-size: 22px; line-height: 1; transition: transform .2s; }
+.nav-btn .lbl { font-size: 10px; color: var(--sub); font-weight: 500; transition: color .15s; }
+.nav-btn.on .lbl { color: var(--primary); }
+.nav-btn.on .ico { transform: scale(1.15); }
+
+/* ═══════════════════════════════
+   PAGE 1 — HOME (기억 기록)
+═══════════════════════════════ */
+.p-home { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* 업로드 */
+.upload-box {
+  width: 100%;
+  min-height: 200px;
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+  overflow: hidden;
+}
+.upload-box:active { background: var(--primary-soft); border-color: var(--primary); }
+.upload-box.has-img { border-style: solid; border-color: var(--primary-soft); padding: 0; min-height: unset; }
+.upload-box .u-icon { font-size: 40px; }
+.upload-box .u-hint { font-size: 14px; color: var(--sub); text-align: center; line-height: 1.6; }
+.upload-box img { width: 100%; max-height: 300px; object-fit: cover; border-radius: calc(var(--r) - 2px); display: block; }
+.pick-btn {
+  padding: 10px 28px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--rs);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 4px;
+  pointer-events: none;
+}
+.change-tag {
+  position: absolute; bottom: 10px; right: 10px;
+  background: rgba(0,0,0,.55); color: #fff; border: none;
+  border-radius: 20px; font-size: 12px; padding: 5px 14px;
+  cursor: pointer; font-family: inherit; backdrop-filter: blur(6px);
+}
+
+/* 카드 */
+.card { background: var(--surface); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.card-label { font-size: 12px; font-weight: 600; color: var(--sub); letter-spacing: .4px; }
+
+/* 위치 버튼 */
+.loc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.loc-btn {
+  padding: 13px 10px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+}
+.loc-btn.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.map-preview {
+  background: linear-gradient(135deg, #e8f5e8, #d4edd4);
+  border-radius: var(--rs);
+  padding: 16px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+}
+.map-preview.show { display: flex; }
+.map-preview .pin { font-size: 26px; animation: bob .9s ease infinite alternate; }
+@keyframes bob { to { transform: translateY(-5px); } }
+.map-preview .map-txt { font-size: 12px; color: #555; }
+.search-row { display: flex; gap: 8px; }
+.search-row input {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg);
+}
+.search-row input:focus { border-color: var(--primary); }
+.search-row button {
+  padding: 11px 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 기억 찾기 버튼 */
+.go-btn {
+  width: 100%;
+  padding: 17px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--r);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+  letter-spacing: -.2px;
+}
+.go-btn:active { background: var(--primary-d); transform: scale(.99); }
+
+/* 채팅 */
+.chat-wrap {
+  background: var(--surface);
+  border-radius: var(--r);
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+}
+.chat-wrap.show { display: flex; }
+.chat-head {
+  padding: 14px 18px;
+  background: var(--primary-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.av {
+  width: 34px; height: 34px;
+  background: var(--primary);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.chat-meta .chat-name { font-size: 13px; font-weight: 600; }
+.chat-meta .chat-st { font-size: 11px; color: var(--sub); }
+.msgs {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.msg { display: flex; gap: 8px; align-items: flex-end; }
+.msg.me { flex-direction: row-reverse; }
+.bbl {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.msg.ai .bbl { background: #FFF8F2; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.msg.me .bbl { background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+.ts { font-size: 10px; color: var(--sub); padding-bottom: 2px; white-space: nowrap; }
+.qrs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
+.qr {
+  padding: 7px 13px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.qr:active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.inp-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+.inp {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg);
+}
+.inp:focus { border-color: var(--primary); }
+.send-btn {
+  width: 38px; height: 38px;
+  background: var(--primary);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+/* 도트 애니메이션 */
+.typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+.dot { width: 7px; height: 7px; background: var(--sub); border-radius: 50%; animation: tp 1.2s infinite; }
+.dot:nth-child(2) { animation-delay: .2s; }
+.dot:nth-child(3) { animation-delay: .4s; }
+@keyframes tp { 0%,60%,100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-6px); opacity: 1; } }
+
+/* 결과 카드 */
+.result-card {
+  background: var(--surface);
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 2px solid var(--primary-soft);
+  display: none;
+}
+.result-card.show { display: block; }
+.res-head {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  padding: 18px;
+  color: #fff;
+}
+.res-head .res-label { font-size: 12px; opacity: .85; margin-bottom: 4px; }
+.res-head .res-title { font-size: 20px; font-weight: 700; }
+.res-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.info-row { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.6; }
+.info-tag {
+  background: var(--primary-soft);
+  color: var(--primary);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.htags { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 12px; border-top: 1px solid var(--border); }
+.ht {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--sub);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+.res-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 18px 18px; }
+.ra {
+  padding: 12px;
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  transition: all .15s;
+  text-align: center;
+}
+.ra.primary { background: var(--primary); color: #fff; }
+.ra.primary:active { background: var(--primary-d); }
+.ra.secondary { background: var(--bg); border: 1.5px solid var(--border); }
+.ra.secondary:active { background: var(--border); }
+
+/* ═══════════════════════════════
+   PAGE 2 — MEMORY (기억 보관함)
+═══════════════════════════════ */
+.p-memory { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.section-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.section-sub { font-size: 13px; color: var(--sub); }
+.filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-chip {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.filter-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+
+.mem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mem-card {
+  background: var(--surface);
+  border-radius: var(--rs);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .15s;
+  border: 1.5px solid var(--border);
+}
+.mem-card:active { transform: scale(.97); }
+.mem-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--primary-soft), var(--accent-soft));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  position: relative;
+}
+.mem-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.mem-info { padding: 10px; }
+.mem-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mem-date { font-size: 11px; color: var(--sub); }
+.mem-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.mem-tag { font-size: 10px; color: var(--primary); background: var(--primary-soft); padding: 2px 8px; border-radius: 10px; }
+
+/* 빈 상태 */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.empty-state .e-icon { font-size: 52px; opacity: .6; }
+.empty-state .e-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.empty-state .e-desc { font-size: 13px; color: var(--sub); line-height: 1.7; }
+.empty-state .e-btn {
+  margin-top: 4px;
+  padding: 11px 24px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--rs);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════
+   PAGE 3 — RECOMMEND (장소 추천)
+═══════════════════════════════ */
+.p-rec { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+.rec-input-card {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rec-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--rs);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg);
+  resize: none;
+  line-height: 1.6;
+}
+.rec-textarea:focus { border-color: var(--primary); }
+.quick-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.quick-chip {
+  padding: 8px 14px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.quick-chip:active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.rec-go-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--rs);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s;
+}
+.rec-go-btn:active { background: var(--primary-d); }
+
+/* 추천 카드 스와이프 */
+.rec-card-area { position: relative; height: 380px; }
+.rec-swipe-card {
+  background: var(--surface);
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 2px solid var(--border);
+  transition: transform .3s ease, opacity .3s ease;
+  position: absolute;
+  width: 100%;
+}
+.rec-swipe-card.exit-left { transform: translateX(-120%) rotate(-12deg); opacity: 0; }
+.rec-swipe-card.exit-right { transform: translateX(120%) rotate(12deg); opacity: 0; }
+.rec-img {
+  height: 200px;
+  background: linear-gradient(135deg, var(--primary-soft), var(--accent-soft));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 64px;
+  position: relative;
+}
+.rec-badge {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(255,255,255,.9);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  backdrop-filter: blur(4px);
+}
+.rec-body { padding: 16px; }
+.rec-place-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.rec-reason {
+  font-size: 13px;
+  color: var(--sub);
+  line-height: 1.7;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.rec-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.rec-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--sub);
+}
+.rec-actions { display: flex; gap: 10px; }
+.rec-pass {
+  flex: 1;
+  padding: 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+.rec-pick {
+  flex: 1;
+  padding: 12px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+
+/* ═══════════════════════════════
+   PAGE 4 — REWARD (포인트/룰렛)
+═══════════════════════════════ */
+.p-reward { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.point-banner {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-radius: var(--r);
+  padding: 24px 20px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.point-label { font-size: 13px; opacity: .85; margin-bottom: 4px; }
+.point-value { font-size: 36px; font-weight: 700; letter-spacing: -1px; }
+.point-unit { font-size: 14px; opacity: .85; margin-top: 2px; }
+.point-icon { font-size: 52px; opacity: .9; }
+
+.roulette-card {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: 24px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border: 2px solid var(--primary-soft);
+}
+.roulette-title { font-size: 16px; font-weight: 700; }
+.roulette-sub { font-size: 13px; color: var(--sub); line-height: 1.6; }
+.roulette-wheel {
+  width: 140px; height: 140px;
+  position: relative;
+  cursor: pointer;
+}
+.roulette-wheel svg { width: 100%; height: 100%; }
+.roulette-wheel .wheel-spin { animation: none; transform-origin: center; }
+.roulette-wheel.spinning .wheel-spin { animation: spin 2.5s cubic-bezier(.17,.67,.35,1) forwards; }
+@keyframes spin { to { transform: rotate(1440deg); } }
+.roulette-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--rs);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+.roulette-btn:active { background: var(--primary-d); }
+.roulette-btn:disabled { background: #ccc; cursor: not-allowed; }
+.cost-note { font-size: 12px; color: var(--sub); }
+
+.reward-log-card { background: var(--surface); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.log-item { display: flex; align-items: center; gap: 12px; }
+.log-icon { font-size: 22px; width: 36px; text-align: center; flex-shrink: 0; }
+.log-desc { flex: 1; font-size: 13px; line-height: 1.5; }
+.log-desc .log-title { font-weight: 500; }
+.log-desc .log-time { font-size: 11px; color: var(--sub); }
+.log-pt { font-size: 14px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
+.log-pt.minus { color: var(--sub); }
+
+/* ═══════════════════════════════
+   PAGE 5 — MY (프로필)
+═══════════════════════════════ */
+.p-my { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.profile-card {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.profile-av {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.profile-name { font-size: 18px; font-weight: 700; }
+.profile-join { font-size: 12px; color: var(--sub); margin-top: 2px; }
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--surface);
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.stat-cell {
+  padding: 18px 12px;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+.stat-cell:last-child { border-right: none; }
+.stat-num { font-size: 22px; font-weight: 700; color: var(--primary); }
+.stat-lbl { font-size: 11px; color: var(--sub); margin-top: 3px; }
+
+.menu-card { background: var(--surface); border-radius: var(--r); overflow: hidden; }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:active { background: var(--bg); }
+.menu-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }
+.menu-label { flex: 1; font-size: 14px; }
+.menu-arrow { color: var(--sub); font-size: 13px; }
+.menu-badge {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+/* ─── 토스트 ─── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--nav-h) + var(--safe-b) + 16px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1A1A1A;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: all .3s ease;
+  max-width: calc(100vw - 48px);
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─── 스캔 오버레이 ─── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  backdrop-filter: blur(6px);
+}
+.overlay.on { display: flex; }
+.scan-box {
+  background: #fff;
+  border-radius: 24px;
+  padding: 36px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 280px;
+  width: 90%;
+}
+.scan-ic { font-size: 52px; animation: pulse .9s ease infinite alternate; }
+@keyframes pulse { to { transform: scale(1.12); } }
+.scan-title { font-size: 18px; font-weight: 700; }
+.scan-desc { font-size: 13px; color: var(--sub); line-height: 1.6; }
+.pbar { width: 100%; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.pfill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0; transition: width 2.6s ease; border-radius: 3px; }
+
+/* ─── 룰렛 결과 오버레이 ─── */
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  backdrop-filter: blur(6px);
+}
+.result-overlay.on { display: flex; }
+.result-box {
+  background: #fff;
+  border-radius: 24px;
+  padding: 36px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 300px;
+  width: 90%;
+}
+.result-box .r-emoji { font-size: 60px; animation: bounce 0.5s ease 3; }
+@keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.result-box .r-title { font-size: 20px; font-weight: 700; }
+.result-box .r-desc { font-size: 14px; color: var(--sub); line-height: 1.7; }
+.result-box .r-close {
+  width: 100%;
+  padding: 13px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--rs);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ─── 반응형 (태블릿) ─── */
+@media (min-width: 481px) {
+  #app { box-shadow: 0 0 60px rgba(0,0,0,.12); }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ▸ 상단 헤더 -->
+  <div class="top-bar">
+    <div class="logo">햇<span class="dot">당</span> ☀️</div>
+    <button class="ghost-btn" id="ghostBtn" onclick="toggleGhost()">고스트 모드</button>
+  </div>
+
+  <!-- ▸ 페이지 영역 -->
+  <div id="pages">
+
+    <!-- ── PAGE 1 : HOME ── -->
+    <div class="page active" id="page-home">
+      <div class="p-home">
+
+        <!-- 사진 업로드 -->
+        <div class="upload-box" id="ubox" onclick="document.getElementById('fileInp').click()">
+          <div id="uPlaceholder" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+            <div class="u-icon">📸</div>
+            <div class="u-hint">오늘의 기억을 사진으로 남겨줘</div>
+            <div class="pick-btn">📁 사진 선택</div>
+          </div>
+          <img id="prevImg" style="display:none" alt="업로드된 사진">
+          <button class="change-tag" id="changeBtn" style="display:none" onclick="event.stopPropagation();document.getElementById('fileInp').click()">📁 변경</button>
+        </div>
+        <input type="file" id="fileInp" accept="image/*" style="display:none">
+
+        <!-- 가게명 입력 -->
+        <div class="card">
+          <div class="card-label">🏪 가게 이름</div>
+          <input id="placeNameInp" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;font-family:inherit;outline:none;background:var(--bg)" placeholder="예) 온더테이블 천안점">
+        </div>
+
+        <!-- 네이버 지도 -->
+        <div class="card">
+          <div class="card-label">📍 위치</div>
+          <div class="loc-grid">
+            <button class="loc-btn" id="btnCur" onclick="setLoc('cur')">🎯 현재 위치</button>
+            <button class="loc-btn" id="btnSrc" onclick="setLoc('src')">🔍 장소 검색</button>
+          </div>
+          <!-- 네이버 지도 -->
+          <div id="naverMap" style="width:100%;height:220px;border-radius:var(--rs);overflow:hidden;display:none;margin-top:8px"></div>
+          <div id="mapAddrWrap" style="display:none;margin-top:8px;padding:10px 14px;background:var(--bg);border-radius:var(--rs);font-size:13px;color:var(--text)">
+            <span id="mapAddr">주소 확인 중...</span>
+          </div>
+          <!-- 장소 검색 -->
+          <div id="srcArea" style="display:none;margin-top:8px">
+            <div class="search-row">
+              <input id="placeInp" placeholder="가게 이름이나 동네 입력" onkeydown="if(event.key==='Enter')searchPlace()">
+              <button onclick="searchPlace()">검색</button>
+            </div>
+            <div id="searchResults" style="display:none;margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+        </div>
+
+        <!-- 태그 선택 -->
+        <div class="card">
+          <div class="card-label">🏷 태그 선택</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px" id="tagArea">
+            <button class="loc-btn" onclick="toggleTag(this,'#카페')">☕ 카페</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#식당')">🍽 식당</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#데이트')">💑 데이트</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#혼자')">🚶 혼자</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#분위기맛집')">✨ 분위기</button>
+            <button class="loc-btn" onclick="toggleTag(this,'#재방문')">🔁 재방문</button>
+          </div>
+        </div>
+
+        <!-- 메모 -->
+        <div class="card">
+          <div class="card-label">📝 한줄 메모 (선택)</div>
+          <input id="memoInp" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;font-family:inherit;outline:none;background:var(--bg)" placeholder="오늘 여기 진짜 좋았다...">
+        </div>
+
+        <button class="go-btn" onclick="saveMemory()">💾 기억 저장하기</button>
+
+      </div>
+    </div>
+
+    <!-- ── PAGE 2 : MEMORY ── -->
+    <div class="page" id="page-memory">
+      <div class="p-memory">
+        <div>
+          <div class="section-title">📚 기억 보관함</div>
+          <div class="section-sub" style="margin-top:4px">AI가 태깅한 장소들이야</div>
+        </div>
+
+        <div class="filter-row" id="filterRow">
+          <button class="filter-chip on" onclick="filterMem(this,'all')">전체</button>
+          <button class="filter-chip" onclick="filterMem(this,'cafe')">☕ 카페</button>
+          <button class="filter-chip" onclick="filterMem(this,'food')">🍽 식당</button>
+          <button class="filter-chip" onclick="filterMem(this,'date')">💑 데이트</button>
+          <button class="filter-chip" onclick="filterMem(this,'solo')">🚶 혼자</button>
+        </div>
+
+        <div class="mem-grid" id="memGrid"></div>
+
+        <div class="empty-state" id="memEmpty">
+          <div class="e-icon">🗂️</div>
+          <div class="e-title">아직 기억이 없어</div>
+          <div class="e-desc">사진을 기록하면<br>여기에 차곡차곡 쌓여!</div>
+          <button class="e-btn" onclick="goPage('home')">📸 첫 기억 기록하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE 3 : RECOMMEND ── -->
+    <div class="page" id="page-rec">
+      <div class="p-rec">
+        <div>
+          <div class="section-title">🗺 오늘 어디 갈까?</div>
+          <div class="section-sub" style="margin-top:4px">내 취향 기반으로 골라줄게</div>
+        </div>
+
+        <div class="rec-input-card">
+          <textarea class="rec-textarea" id="recQuery" placeholder="예) 오늘 분위기 있는 카페 가고 싶어&#10;주말 저녁 커플 코스 추천해줘"></textarea>
+          <div class="quick-chips">
+            <button class="quick-chip" onclick="setQuery('☕ 감성 카페')">☕ 감성 카페</button>
+            <button class="quick-chip" onclick="setQuery('🍜 혼밥 맛집')">🍜 혼밥 맛집</button>
+            <button class="quick-chip" onclick="setQuery('💑 데이트 코스')">💑 데이트 코스</button>
+            <button class="quick-chip" onclick="setQuery('🌙 야식 맛집')">🌙 야식</button>
+          </div>
+          <button class="rec-go-btn" onclick="startRec()">✨ 추천받기</button>
+        </div>
+
+        <div id="recArea" style="display:none">
+          <div class="rec-card-area" id="recCardArea"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE 4 : REWARD ── -->
+    <div class="page" id="page-reward">
+      <div class="p-reward">
+
+        <div class="point-banner">
+          <div>
+            <div class="point-label">🌟 내 햇당 포인트</div>
+            <div class="point-value" id="myPoints">1,240</div>
+            <div class="point-unit">P</div>
+          </div>
+          <div class="point-icon">💰</div>
+        </div>
+
+        <div class="roulette-card">
+          <div class="roulette-title">🎡 럭키 드로우</div>
+          <div class="roulette-sub">포인트 100P를 사용해<br>천안·아산 맛집 쿠폰 뽑기!</div>
+          <div class="roulette-wheel" id="rouletteWheel" onclick="spinRoulette()">
+            <svg viewBox="0 0 200 200">
+              <g class="wheel-spin" id="wheelSpin">
+                <path d="M100,100 L100,10 A90,90 0 0,1 190,100 Z" fill="#FF6B35"/>
+                <path d="M100,100 L190,100 A90,90 0 0,1 100,190 Z" fill="#FFB347"/>
+                <path d="M100,100 L100,190 A90,90 0 0,1 10,100 Z" fill="#FF8C5A"/>
+                <path d="M100,100 L10,100 A90,90 0 0,1 100,10 Z" fill="#FFCF80"/>
+                <text x="140" y="60" text-anchor="middle" font-size="13" fill="white" transform="rotate(45,100,100)">🍜 식사권</text>
+                <text x="140" y="60" text-anchor="middle" font-size="13" fill="white" transform="rotate(135,100,100)">☕ 음료</text>
+                <text x="140" y="60" text-anchor="middle" font-size="13" fill="white" transform="rotate(225,100,100)">🎟 10%</text>
+                <text x="140" y="60" text-anchor="middle" font-size="13" fill="white" transform="rotate(315,100,100)">😢 꽝</text>
+              </g>
+              <polygon points="100,5 94,22 106,22" fill="#1A1A1A"/>
+              <circle cx="100" cy="100" r="12" fill="white" stroke="#eee" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="cost-note">1회 = 100P 차감</div>
+          <button class="roulette-btn" id="rouletteBtn" onclick="spinRoulette()">🎰 돌리기!</button>
+        </div>
+
+        <div class="reward-log-card">
+          <div class="card-label">📋 최근 적립 내역</div>
+          <div id="logList">
+            <div class="log-item">
+              <div class="log-icon">📸</div>
+              <div class="log-desc">
+                <div class="log-title">기억 기록 인증</div>
+                <div class="log-time">오늘 14:32</div>
+              </div>
+              <div class="log-pt">+30P</div>
+            </div>
+            <div class="log-item">
+              <div class="log-icon">🌟</div>
+              <div class="log-desc">
+                <div class="log-title">신규 장소 개척 보너스</div>
+                <div class="log-time">어제 18:05</div>
+              </div>
+              <div class="log-pt">+500P</div>
+            </div>
+            <div class="log-item">
+              <div class="log-icon">🎡</div>
+              <div class="log-desc">
+                <div class="log-title">럭키 드로우 사용</div>
+                <div class="log-time">어제 12:00</div>
+              </div>
+              <div class="log-pt minus">-100P</div>
+            </div>
+            <div class="log-item">
+              <div class="log-icon">📸</div>
+              <div class="log-desc">
+                <div class="log-title">기억 기록 인증</div>
+                <div class="log-time">3일 전</div>
+              </div>
+              <div class="log-pt">+45P</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── PAGE 5 : MY ── -->
+    <div class="page" id="page-my">
+      <div class="p-my">
+
+        <div class="profile-card">
+          <div class="profile-av" id="profileAvatar">😊</div>
+          <div style="flex:1">
+            <div class="profile-name" id="profileName">로그인이 필요해</div>
+            <div class="profile-join">햇당과 함께 기억을 쌓아봐</div>
+          </div>
+          <button id="loginBtn" onclick="login()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-family:inherit;cursor:pointer;font-weight:600">구글 로그인</button>
+          <button id="logoutBtn" onclick="logout()" style="display:none;padding:8px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rs);font-size:13px;font-family:inherit;cursor:pointer">로그아웃</button>
+        </div>
+
+        <div class="profile-stats">
+          <div class="stat-cell">
+            <div class="stat-num" id="statMem">0</div>
+            <div class="stat-lbl">기억 기록</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-num" id="statPoints">0</div>
+            <div class="stat-lbl">포인트</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-num">3</div>
+            <div class="stat-lbl">개척 장소</div>
+          </div>
+        </div>
+
+        <div class="menu-card">
+          <div class="menu-item" onclick="showToast('준비 중이야! 조금만 기다려줘 😊')">
+            <div class="menu-icon">👻</div>
+            <div class="menu-label">고스트 모드 설정</div>
+            <div class="menu-arrow">›</div>
+          </div>
+          <div class="menu-item" onclick="showToast('알림 설정 화면 준비 중!')">
+            <div class="menu-icon">🔔</div>
+            <div class="menu-label">알림 설정</div>
+            <div class="menu-badge">New</div>
+          </div>
+          <div class="menu-item" onclick="showToast('내 취향 데이터 화면 준비 중!')">
+            <div class="menu-icon">✨</div>
+            <div class="menu-label">내 취향 데이터</div>
+            <div class="menu-arrow">›</div>
+          </div>
+          <div class="menu-item" onclick="showToast('B2B 파트너 혜택 화면 준비 중!')">
+            <div class="menu-icon">🏪</div>
+            <div class="menu-label">파트너 혜택</div>
+            <div class="menu-arrow">›</div>
+          </div>
+          <div class="menu-item" id="installMenuItem" style="display:none" onclick="installApp()">
+            <div class="menu-icon">📲</div>
+            <div class="menu-label">홈 화면에 설치하기</div>
+            <div class="menu-badge">NEW</div>
+          </div>
+          <div class="menu-item" onclick="showToast('문의하기 화면 준비 중!')">
+            <div class="menu-icon">💬</div>
+            <div class="menu-label">문의하기</div>
+            <div class="menu-arrow">›</div>
+          </div>
+        </div>
+
+        <div style="text-align:center;padding:8px 0 4px">
+          <div style="font-size:12px;color:var(--sub)">햇당 v0.3 · "넌 찍기만 해, 기억은 내가 할게"</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ▸ 바텀 내비 -->
+  <nav id="nav">
+    <button class="nav-btn on" id="nav-home" onclick="goPage('home')">
+      <span class="ico">🏠</span><span class="lbl">홈</span>
+    </button>
+    <button class="nav-btn" id="nav-memory" onclick="goPage('memory')">
+      <span class="ico">📚</span><span class="lbl">기억</span>
+    </button>
+    <button class="nav-btn" id="nav-rec" onclick="goPage('rec')">
+      <span class="ico">🗺</span><span class="lbl">추천</span>
+    </button>
+    <button class="nav-btn" id="nav-reward" onclick="goPage('reward')">
+      <span class="ico">🎡</span><span class="lbl">리워드</span>
+    </button>
+    <button class="nav-btn" id="nav-my" onclick="goPage('my')">
+      <span class="ico">😊</span><span class="lbl">MY</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ▸ 스캔 오버레이 -->
+<div class="overlay" id="overlay">
+  <div class="scan-box">
+    <div class="scan-ic">🔍</div>
+    <div class="scan-title">사진 분석 중이야</div>
+    <div class="scan-desc">AI가 사진 속 분위기,<br>색감, 장소 단서를 읽고 있어</div>
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+  </div>
+</div>
+
+<!-- ▸ 룰렛 결과 오버레이 -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-box">
+    <div class="r-emoji" id="rEmoji">🎉</div>
+    <div class="r-title" id="rTitle">당첨!</div>
+    <div class="r-desc" id="rDesc">설명</div>
+    <button class="r-close" onclick="closeResult()">확인</button>
+  </div>
+</div>
+
+<!-- ▸ 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* ═══ Firebase 초기화 ═══ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, increment, getDoc, setDoc }
+  from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { getStorage, ref, uploadString, getDownloadURL }
+  from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAqcQiWdDLqnE6OtWuhrHPl4UZB3ZCzadA",
+  authDomain: "hatdang-7e32d.firebaseapp.com",
+  projectId: "hatdang-7e32d",
+  storageBucket: "hatdang-7e32d.firebasestorage.app",
+  messagingSenderId: "86521864445",
+  appId: "1:86521864445:web:b359c5d27c3683642a1e94"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth   = getAuth(firebaseApp);
+const db     = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
+
+/* ═══ 설정 ═══ */
+const API_BASE = 'https://minuya.pythonanywhere.com';
+
+const SYSPROMPT = `너는 '햇당' 앱의 AI 비서야. 사용자가 기억 안 나는 카페/식당을 찾도록 도와줘.
+- 사진 분석 후 자연스러운 한국어로 질문을 하나씩 해
+- 짧고 친근하게
+- 정보가 충분하면 아래 JSON만 출력해:
+{"found":true,"name":"가게명","location":"위치","visit_date":"방문시기","menu":"메뉴","tags":["#태그1","#태그2"]}
+- 부족하면 질문만 해, JSON 주지 마`;
+
+const REC_PROMPT = `너는 '햇당' 앱의 장소 추천 AI야. 충남 천안·아산 지역 기반으로 추천해줘.
+- 반드시 아래 JSON 배열 형식으로만 응답해 (설명 없이):
+[{"name":"가게명","emoji":"🍜","type":"카테고리","reason":"추천 이유 (1-2문장, 친근하게)","tags":["태그1","태그2","태그3"],"distance":"도보 5분","price":"₩₩"}]
+- 3개 추천해줘`;
+
+/* ═══ 상태 ═══ */
+let imgB64 = null, imgMime = null, locText = '위치 없음';
+let chatHistory = [], loading = false;
+let ghostMode = false;
+let memories = [];
+let myPoints = 0;
+let spinning = false;
+let currentUser = null;
+
+/* ═══ 로그인 상태 감지 ═══ */
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
+  if (user) {
+    // 로그인 됨
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'block';
+    document.getElementById('profileName').textContent = user.displayName || '햇당 유저';
+    document.getElementById('profileAvatar').textContent = user.photoURL ? '' : '😊';
+    if (user.photoURL) {
+      document.getElementById('profileAvatar').style.backgroundImage = `url(${user.photoURL})`;
+      document.getElementById('profileAvatar').style.backgroundSize = 'cover';
+    }
+    await loadUserData(user.uid);
+  } else {
+    // 로그아웃 됨
+    document.getElementById('loginBtn').style.display = 'flex';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('profileName').textContent = '로그인이 필요해';
+    myPoints = 0;
+    memories = [];
+    document.getElementById('myPoints').textContent = '0';
+  }
+});
+
+/* ═══ 구글 로그인 ═══ */
+async function login() {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    showToast('🎉 로그인 성공!');
+  } catch (e) {
+    showToast('로그인 실패: ' + e.message);
+  }
+}
+
+async function logout() {
+  await signOut(auth);
+  showToast('로그아웃 됐어');
+}
+
+window.login = login;
+window.logout = logout;
+
+/* ═══ 유저 데이터 로드 ═══ */
+async function loadUserData(uid) {
+  // 포인트 로드
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  if (userSnap.exists()) {
+    myPoints = userSnap.data().points || 0;
+  } else {
+    // 신규 유저 문서 생성
+    await setDoc(userRef, { points: 0, createdAt: new Date() });
+    myPoints = 0;
+  }
+  document.getElementById('myPoints').textContent = myPoints.toLocaleString();
+
+  // 기억 로드
+  const q = query(collection(db, 'memories'), where('uid', '==', uid), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  memories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  document.getElementById('statMem').textContent = memories.length;
+  document.getElementById('statPoints').textContent = myPoints.toLocaleString();
+}
+
+/* ═══ 네비게이션 ═══ */
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('on');
+  if (name === 'memory') renderMemories();
+  if (name === 'my') document.getElementById('statMem').textContent = memories.length;
+}
+
+/* ═══ 고스트 모드 ═══ */
+function toggleGhost() {
+  ghostMode = !ghostMode;
+  const btn = document.getElementById('ghostBtn');
+  btn.classList.toggle('active', ghostMode);
+  btn.textContent = ghostMode ? '고스트 ON' : '고스트 모드';
+  showToast(ghostMode ? '👻 고스트 모드 ON — 데이터 수집 중단' : '데이터 수집이 재개됐어');
+}
+
+/* ═══ 파일 입력 ═══ */
+document.getElementById('fileInp').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    imgB64 = e.target.result.split(',')[1];
+    imgMime = file.type;
+    document.getElementById('prevImg').src = e.target.result;
+    document.getElementById('prevImg').style.display = 'block';
+    document.getElementById('uPlaceholder').style.display = 'none';
+    document.getElementById('changeBtn').style.display = 'block';
+    document.getElementById('ubox').classList.add('has-img');
+  };
+  reader.readAsDataURL(file);
+});
+
+/* ═══ 네이버 지도 ═══ */
+let naverMap = null, naverMarker = null;
+let selectedLat = null, selectedLng = null, selectedAddr = '';
+let selectedTags = [];
+
+function initMap(lat, lng) {
+  const mapEl = document.getElementById('naverMap');
+  mapEl.style.display = 'block';
+  document.getElementById('mapAddrWrap').style.display = 'block';
+
+  if (!naverMap) {
+    naverMap = new naver.maps.Map('naverMap', {
+      center: new naver.maps.LatLng(lat, lng),
+      zoom: 16,
+      zoomControl: false
+    });
+    naverMarker = new naver.maps.Marker({
+      position: new naver.maps.LatLng(lat, lng),
+      map: naverMap
+    });
+    // 지도 클릭 시 핀 이동
+    naver.maps.Event.addListener(naverMap, 'click', e => {
+      const pos = e.coord;
+      naverMarker.setPosition(pos);
+      selectedLat = pos.lat();
+      selectedLng = pos.lng();
+      reverseGeocode(pos.lat(), pos.lng());
+    });
+  } else {
+    const pos = new naver.maps.LatLng(lat, lng);
+    naverMap.setCenter(pos);
+    naverMarker.setPosition(pos);
+  }
+  selectedLat = lat;
+  selectedLng = lng;
+  reverseGeocode(lat, lng);
+}
+
+function reverseGeocode(lat, lng) {
+  naver.maps.Service.reverseGeocode({
+    coords: new naver.maps.LatLng(lat, lng),
+    orders: [naver.maps.Service.OrderType.ADDR]
+  }, (status, res) => {
+    if (status === naver.maps.Service.Status.OK) {
+      const addr = res.v2.address.jibunAddress || res.v2.address.roadAddress || '주소 확인 불가';
+      selectedAddr = addr;
+      document.getElementById('mapAddr').textContent = '📍 ' + addr;
+    }
+  });
+}
+
+function setLoc(m) {
+  document.getElementById('btnCur').classList.toggle('on', m === 'cur');
+  document.getElementById('btnSrc').classList.toggle('on', m === 'src');
+  document.getElementById('srcArea').style.display = m === 'src' ? 'block' : 'none';
+
+  if (m === 'cur') {
+    document.getElementById('mapAddr').textContent = '위치 확인 중...';
+    navigator.geolocation?.getCurrentPosition(
+      p => initMap(p.coords.latitude, p.coords.longitude),
+      () => {
+        // 권한 거부 시 천안 기본값
+        initMap(36.8151, 127.1139);
+        document.getElementById('mapAddr').textContent = '📍 위치 권한 필요 — 천안 기본값';
+      }
+    );
+  }
+}
+
+async function searchPlace() {
+  const q = document.getElementById('placeInp').value.trim();
+  if (!q) return;
+
+  const wrap = document.getElementById('searchResults');
+  wrap.style.display = 'flex';
+  wrap.innerHTML = '<div style="padding:10px;color:var(--sub);font-size:13px">검색 중...</div>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/search-place?query=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    if (!res.ok || !data.results?.length) {
+      wrap.innerHTML = '<div style="padding:10px;color:var(--sub);font-size:13px">검색 결과가 없어. 다른 키워드로 해봐!</div>';
+      return;
+    }
+    wrap.innerHTML = data.results.map(r =>
+      `<div onclick="selectPlace(${r.lat},${r.lng},'${r.addr.replace(/'/g,"\\'")}','${r.name.replace(/'/g,"\\'")}')"
+        style="padding:10px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rs);cursor:pointer">
+        <div style="font-size:13px;font-weight:600">${r.name}</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px">${r.category} · ${r.addr}</div>
+      </div>`
+    ).join('');
+  } catch (e) {
+    wrap.innerHTML = `<div style="padding:10px;color:var(--sub);font-size:13px">오류: ${e.message}</div>`;
+  }
+}
+
+function selectPlace(lat, lng, addr, name) {
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('placeInp').value = '';
+  // 가게명 자동 입력
+  if (!document.getElementById('placeNameInp').value) {
+    document.getElementById('placeNameInp').value = name;
+  }
+  initMap(lat, lng);
+  selectedAddr = addr;
+  document.getElementById('mapAddr').textContent = '📍 ' + addr;
+}
+window.selectPlace = selectPlace;
+
+/* ═══ 태그 토글 ═══ */
+function toggleTag(btn, tag) {
+  const idx = selectedTags.indexOf(tag);
+  if (idx === -1) { selectedTags.push(tag); btn.classList.add('on'); }
+  else { selectedTags.splice(idx, 1); btn.classList.remove('on'); }
+}
+
+/* ═══ 분석 시작 ═══ */
+function startAnalysis() {
+  const ov = document.getElementById('overlay');
+  ov.classList.add('on');
+  const pf = document.getElementById('pfill');
+  setTimeout(() => pf.style.width = '100%', 30);
+
+  const chat = document.getElementById('chat');
+  chat.classList.add('show');
+  document.getElementById('msgs').innerHTML = '';
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('qrs').innerHTML = '';
+  chatHistory = [];
+
+  setTimeout(async () => {
+    ov.classList.remove('on');
+    pf.style.width = '0';
+
+    const parts = [];
+    if (imgB64) parts.push({ inlineData: { mimeType: imgMime, data: imgB64 } });
+    parts.push({ text: `사진을 분석해줘. 위치: ${locText}. 첫 질문 시작해줘.` });
+
+    chatHistory.push({ role: 'user', parts });
+    await callAI();
+  }, 2800);
+}
+
+/* ═══ Gemini 호출 ═══ */
+async function callAI() {
+  setLoad(true);
+  const te = addTyping();
+  try {
+    const contents = [
+      { role: 'user', parts: [{ text: SYSPROMPT + '\n\n---\n대화 시작해줘.' }] },
+      { role: 'model', parts: [{ text: '알겠어! 햇당이야 ☀️ 기억 찾는 거 도와줄게.' }] },
+      ...chatHistory
+    ];
+    const res = await fetch(`${API_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'API 오류');
+    const txt = data.text || '';
+    chatHistory.push({ role: 'model', parts: [{ text: txt }] });
+    te.remove();
+
+    const jm = txt.match(/\{[\s\S]*?"found"\s*:\s*true[\s\S]*?\}/);
+    if (jm) {
+      try { showResult(JSON.parse(jm[0])); addBubble('ai', '🎉 찾은 것 같아! 아래 카드 확인해봐!'); }
+      catch { addBubble('ai', txt); }
+    } else {
+      addBubble('ai', txt);
+      parseQR(txt);
+    }
+  } catch (e) {
+    te.remove();
+    addBubble('ai', `앗, 오류가 났어 😅\n${e.message}`);
+  }
+  setLoad(false);
+}
+
+function parseQR(txt) {
+  const opts = [];
+  txt.split('\n').forEach(l => { const m = l.match(/^[①②③④1-5]\.\s*(.+)/); if (m) opts.push(m[1].trim()); });
+  const el = document.getElementById('qrs');
+  el.innerHTML = '';
+  opts.slice(0, 4).forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'qr'; b.textContent = o;
+    b.onclick = () => quickSend(o);
+    el.appendChild(b);
+  });
+}
+
+async function quickSend(t) {
+  document.getElementById('qrs').innerHTML = '';
+  addBubble('me', t);
+  chatHistory.push({ role: 'user', parts: [{ text: t }] });
+  await callAI();
+}
+
+async function send() {
+  if (loading) return;
+  const inp = document.getElementById('inp');
+  const t = inp.value.trim();
+  if (!t) return;
+  inp.value = '';
+  document.getElementById('qrs').innerHTML = '';
+  addBubble('me', t);
+  chatHistory.push({ role: 'user', parts: [{ text: t }] });
+  await callAI();
+}
+
+function showResult(r) {
+  document.getElementById('resTitle').textContent = r.name || '기억 복원 완료';
+  document.getElementById('resBody').innerHTML = `
+    <div class="info-row"><span class="info-tag">📍 위치</span><span>${r.location || '-'}</span></div>
+    <div class="info-row"><span class="info-tag">📅 방문</span><span>${r.visit_date || '-'}</span></div>
+    <div class="info-row"><span class="info-tag">🍽 메뉴</span><span>${r.menu || '-'}</span></div>
+    <div class="htags">${(r.tags || []).map(t => `<span class="ht">${t}</span>`).join('')}</div>`;
+  document.getElementById('result').classList.add('show');
+  setTimeout(() => document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+  window._lastResult = r;
+}
+
+function addTyping() {
+  const el = document.createElement('div');
+  el.className = 'msg ai';
+  el.innerHTML = '<div class="bbl"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  document.getElementById('msgs').appendChild(el);
+  scrollMsgs(); return el;
+}
+
+function addBubble(role, txt) {
+  const now = new Date();
+  const t = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const el = document.createElement('div');
+  el.className = `msg ${role === 'ai' ? 'ai' : 'me'}`;
+  el.innerHTML = `<div class="bbl">${txt.replace(/\n/g, '<br>')}</div><div class="ts">${t}</div>`;
+  document.getElementById('msgs').appendChild(el);
+  scrollMsgs();
+}
+
+function scrollMsgs() { const m = document.getElementById('msgs'); m.scrollTop = m.scrollHeight; }
+function setLoad(v) {
+  loading = v;
+  document.getElementById('sendBtn').disabled = v;
+  document.getElementById('chatSt').textContent = v ? '생각 중...' : '대화 중';
+}
+
+/* ═══ 기억 저장 ═══ */
+async function saveMemory() {
+  if (!currentUser) { showToast('로그인 후 저장할 수 있어!'); return; }
+
+  const placeName = document.getElementById('placeNameInp').value.trim();
+  if (!placeName) { showToast('가게 이름을 입력해줘!'); return; }
+  if (!selectedLat) { showToast('위치를 먼저 선택해줘!'); return; }
+  if (!imgB64) { showToast('사진을 먼저 올려줘!'); return; }
+
+  try {
+    showToast('💾 저장 중...');
+    let imgUrl = null;
+
+    // 사진 Storage 업로드
+    const imgRef = ref(storage, `memories/${currentUser.uid}/${Date.now()}.jpg`);
+    await uploadString(imgRef, imgB64, 'base64', { contentType: imgMime });
+    imgUrl = await getDownloadURL(imgRef);
+
+    const memo = document.getElementById('memoInp').value.trim();
+
+    // Firestore에 기억 저장
+    const memData = {
+      uid: currentUser.uid,
+      name: placeName,
+      location: selectedAddr,
+      lat: selectedLat,
+      lng: selectedLng,
+      memo,
+      tags: selectedTags,
+      emoji: selectedTags.includes('#카페') ? '☕' : selectedTags.includes('#식당') ? '🍽' : '📍',
+      imgUrl,
+      createdAt: new Date(),
+      savedAt: new Date().toLocaleDateString('ko-KR')
+    };
+    const docRef = await addDoc(collection(db, 'memories'), memData);
+    memories.unshift({ id: docRef.id, ...memData });
+
+    // 포인트 적립
+    const bonus = 10 + Math.floor(Math.random() * 41);
+    myPoints += bonus;
+    const userRef = doc(db, 'users', currentUser.uid);
+    await updateDoc(userRef, { points: increment(bonus) });
+    await addDoc(collection(db, 'pointLogs'), {
+      uid: currentUser.uid, type: '기억 기록 인증', points: bonus, createdAt: new Date()
+    });
+
+    document.getElementById('myPoints').textContent = myPoints.toLocaleString();
+    document.getElementById('statMem').textContent = memories.length;
+    document.getElementById('statPoints').textContent = myPoints.toLocaleString();
+
+    // 폼 초기화
+    document.getElementById('placeNameInp').value = '';
+    document.getElementById('memoInp').value = '';
+    document.getElementById('placeInp').value = '';
+    document.getElementById('prevImg').style.display = 'none';
+    document.getElementById('uPlaceholder').style.display = 'flex';
+    document.getElementById('changeBtn').style.display = 'none';
+    document.getElementById('ubox').classList.remove('has-img');
+    selectedTags = [];
+    document.querySelectorAll('#tagArea .loc-btn').forEach(b => b.classList.remove('on'));
+    imgB64 = null;
+
+    showToast(`🎉 기억 저장 완료! +${bonus}P 적립됐어`);
+  } catch (e) {
+    showToast('저장 실패: ' + e.message);
+  }
+}
+
+function shareMemory() { showToast('🔗 링크 복사됐어! (준비 중)'); }
+
+/* ═══ 기억 보관함 렌더 ═══ */
+function renderMemories(filter = 'all') {
+  const grid = document.getElementById('memGrid');
+  const empty = document.getElementById('memEmpty');
+  let list = memories;
+  grid.innerHTML = '';
+  if (!list.length) { empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  list.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'mem-card';
+    div.innerHTML = `
+      <div class="mem-thumb">
+        <span>${m.emoji || '📍'}</span>
+        ${m.imgSrc ? `<img src="${m.imgSrc}" alt="${m.name}">` : ''}
+      </div>
+      <div class="mem-info">
+        <div class="mem-name">${m.name}</div>
+        <div class="mem-date">${m.savedAt}</div>
+        <div class="mem-tags">${(m.tags || []).slice(0, 2).map(t => `<span class="mem-tag">${t}</span>`).join('')}</div>
+      </div>`;
+    div.onclick = () => showToast(`📍 ${m.name} · ${m.location || '-'}`);
+    grid.appendChild(div);
+  });
+}
+
+function filterMem(btn, cat) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
+  btn.classList.add('on');
+  renderMemories(cat);
+}
+
+/* ═══ 추천 ═══ */
+function setQuery(t) { document.getElementById('recQuery').value = t; }
+
+let recList = [], recIdx = 0;
+
+async function startRec() {
+  const q = document.getElementById('recQuery').value.trim();
+  if (!q) { showToast('어떤 장소가 필요한지 입력해줘!'); return; }
+  document.getElementById('recArea').style.display = 'block';
+  document.getElementById('recCardArea').innerHTML = '<div style="text-align:center;padding:40px;color:var(--sub);font-size:13px">AI가 골라주는 중...<br><br><span style="font-size:28px">🤔</span></div>';
+
+  try {
+    const contents = [{ role: 'user', parts: [{ text: REC_PROMPT + `\n\n요청: ${q}` }] }];
+    const res = await fetch(`${API_BASE}/api/recommend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'API 오류');
+    const clean = (data.text || '[]').replace(/```json|```/g, '').trim();
+    // JSON 배열 부분만 추출 (잘린 경우 대비)
+    const arrMatch = clean.match(/\[[\s\S]*\]/);
+    if (!arrMatch) throw new Error('추천 결과를 받지 못했어. 다시 시도해줘!');
+    recList = JSON.parse(arrMatch[0]);
+    recIdx = 0;
+    renderRecCard();
+  } catch (e) {
+    document.getElementById('recCardArea').innerHTML = `<div style="text-align:center;padding:40px;color:var(--sub);font-size:13px">오류가 났어 😅<br>${e.message}</div>`;
+  }
+}
+
+function renderRecCard() {
+  const area = document.getElementById('recCardArea');
+  if (recIdx >= recList.length) {
+    area.innerHTML = '<div style="text-align:center;padding:40px;color:var(--sub);font-size:13px">추천 다 봤어!<br>다시 입력해봐 😊</div>';
+    return;
+  }
+  const r = recList[recIdx];
+  area.innerHTML = `
+    <div class="rec-swipe-card" id="recCard">
+      <div class="rec-img">
+        <span>${r.emoji || '🍽'}</span>
+        <div class="rec-badge">${r.type || '장소'}</div>
+      </div>
+      <div class="rec-body">
+        <div class="rec-place-name">${r.name}</div>
+        <div class="rec-reason">${r.reason}</div>
+        <div class="rec-meta">
+          ${(r.tags || []).map(t => `<span class="rec-chip">${t}</span>`).join('')}
+          <span class="rec-chip">📍 ${r.distance || ''}</span>
+          <span class="rec-chip">${r.price || ''}</span>
+        </div>
+        <div class="rec-actions">
+          <button class="rec-pass" onclick="swipeCard('left')">👎 패스</button>
+          <button class="rec-pick" onclick="swipeCard('right')">💾 저장!</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function swipeCard(dir) {
+  const card = document.getElementById('recCard');
+  if (!card) return;
+  card.classList.add(dir === 'left' ? 'exit-left' : 'exit-right');
+  if (dir === 'right') showToast(`💾 ${recList[recIdx]?.name} 저장했어!`);
+  setTimeout(() => { recIdx++; renderRecCard(); }, 320);
+}
+
+/* ═══ 룰렛 ═══ */
+const prizes = [
+  { emoji: '🍜', title: '식사권 당첨!', desc: '파트너 식당에서 1인 식사권을 받았어!\n매장 방문 시 앱 화면 보여줘.' },
+  { emoji: '☕', title: '음료 당첨!', desc: '파트너 카페 무료 음료 쿠폰이야!\n유효기간: 30일' },
+  { emoji: '🎟', title: '10% 할인 쿠폰!', desc: '파트너 매장 10% 할인 쿠폰이야!\n다음 방문에 사용해봐.' },
+  { emoji: '😢', title: '꽝...', desc: '아쉽지만 꽝이야!\n그래도 5% 위로 쿠폰 줄게. 😊' }
+];
+
+function spinRoulette() {
+  if (spinning) return;
+  if (!currentUser) { showToast('로그인 후 이용할 수 있어!'); return; }
+  if (myPoints < 100) { showToast('포인트가 부족해! 기억을 기록해서 모아봐 💪'); return; }
+  spinning = true;
+  myPoints -= 100;
+  document.getElementById('myPoints').textContent = myPoints.toLocaleString();
+
+  // Firebase 포인트 차감
+  const userRef = doc(db, 'users', currentUser.uid);
+  updateDoc(userRef, { points: increment(-100) });
+  addDoc(collection(db, 'pointLogs'), {
+    uid: currentUser.uid, type: '럭키 드로우 사용', points: -100, createdAt: new Date()
+  });
+
+  const wheel = document.getElementById('rouletteWheel');
+  const btn = document.getElementById('rouletteBtn');
+  wheel.classList.add('spinning');
+  btn.disabled = true;
+  btn.textContent = '돌아가는 중...';
+
+  const prizeIdx = Math.floor(Math.random() * prizes.length);
+  setTimeout(() => {
+    spinning = false;
+    wheel.classList.remove('spinning');
+    btn.disabled = false;
+    btn.textContent = '🎰 다시 돌리기!';
+    const p = prizes[prizeIdx];
+    document.getElementById('rEmoji').textContent = p.emoji;
+    document.getElementById('rTitle').textContent = p.title;
+    document.getElementById('rDesc').textContent = p.desc;
+    document.getElementById('resultOverlay').classList.add('on');
+  }, 2600);
+}
+
+/* ═══ 전역 함수 등록 (HTML onclick용) ═══ */
+window.goPage = goPage;
+window.toggleGhost = toggleGhost;
+window.setLoc = setLoc;
+window.searchPlace = searchPlace;
+window.toggleTag = toggleTag;
+window.saveMemory = saveMemory;
+window.shareMemory = shareMemory;
+window.filterMem = filterMem;
+window.setQuery = setQuery;
+window.startRec = startRec;
+window.swipeCard = swipeCard;
+window.spinRoulette = spinRoulette;
+window.closeResult = closeResult;
+window.installApp = installApp;
+
+function closeResult() { document.getElementById('resultOverlay').classList.remove('on'); }
+
+/* ═══ 토스트 ═══ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ═══ PWA 서비스워커 등록 ═══ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('✅ 햇당 SW 등록 완료'))
+      .catch(e => console.warn('SW 등록 실패:', e));
+  });
+}
+
+/* ═══ PWA 설치 배너 ═══ */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  setTimeout(() => {
+    showToast('📲 햇당을 홈 화면에 추가할 수 있어!');
+    const installItem = document.getElementById('installMenuItem');
+    if (installItem) installItem.style.display = 'flex';
+  }, 3000);
+});
+window.addEventListener('appinstalled', () => {
+  showToast('🎉 햇당 설치 완료! 홈 화면에서 열어봐');
+  deferredPrompt = null;
+});
+function installApp() {
+  if (!deferredPrompt) { showToast('이미 설치됐거나 지원하지 않는 브라우저야'); return; }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') showToast('🎉 설치 시작!');
+    deferredPrompt = null;
+  });
+}
+</script>
+</body>
+</html>
