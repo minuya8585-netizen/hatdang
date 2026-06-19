@@ -99,9 +99,13 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: va
 .field-inp:focus { border-color: var(--primary); }
 
 /* ── 영수증 항목 분석 결과 ── */
-.item-row { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg); border-radius: var(--rs); border: 1.5px solid var(--border); }
-.item-row input[type=text] { flex: 1; border: none; background: none; font-size: 14px; font-family: inherit; outline: none; font-weight: 500; }
-.item-row input[type=number] { width: 80px; border: none; background: none; font-size: 14px; font-family: inherit; outline: none; text-align: right; font-weight: 600; color: var(--primary); }
+.item-row { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--bg); border-radius: var(--rs); border: 1.5px solid var(--border); }
+.item-row-top { display: flex; align-items: center; gap: 8px; }
+.item-row input[type=text] { flex: 1; min-width: 0; border: none; background: none; font-size: 14px; font-family: inherit; outline: none; font-weight: 500; }
+.item-row .item-price-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.item-row .item-price-label { font-size: 11px; color: var(--sub); }
+.item-row input[type=number] { width: 110px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 14px; font-family: inherit; outline: none; text-align: right; font-weight: 600; color: var(--primary); padding: 6px 10px; }
+.item-row input[type=number]:focus { border-color: var(--primary); }
 .item-del { color: var(--sub); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
 .add-item-btn { padding: 10px; border: 1.5px dashed var(--border); border-radius: var(--rs); text-align: center; font-size: 13px; color: var(--sub); cursor: pointer; background: none; font-family: inherit; }
 .add-item-btn:active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
@@ -919,9 +923,14 @@ function renderItems() {
   const wrap = document.getElementById('itemsList');
   wrap.innerHTML = items.map(it => `
     <div class="item-row">
-      <input type="text" value="${it.name}" onchange="updateItem('${it.id}','name',this.value)">
-      <input type="number" value="${it.price}" onchange="updateItem('${it.id}','price',this.value)">
-      <span class="item-del" onclick="delItem('${it.id}')">✕</span>
+      <div class="item-row-top">
+        <input type="text" placeholder="항목 이름" value="${it.name}" onchange="updateItem('${it.id}','name',this.value)">
+        <span class="item-del" onclick="delItem('${it.id}')">✕</span>
+      </div>
+      <div class="item-price-row">
+        <span class="item-price-label">가격</span>
+        <input type="number" inputmode="numeric" value="${it.price}" onchange="updateItem('${it.id}','price',this.value)">
+      </div>
     </div>`).join('');
   updateTotal();
 }
