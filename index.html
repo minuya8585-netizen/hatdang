@@ -99,13 +99,14 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: va
 .field-inp:focus { border-color: var(--primary); }
 
 /* ── 영수증 항목 분석 결과 ── */
-.item-row { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--bg); border-radius: var(--rs); border: 1.5px solid var(--border); }
-.item-row-top { display: flex; align-items: center; gap: 8px; }
-.item-row input[type=text] { flex: 1; min-width: 0; border: none; background: none; font-size: 14px; font-family: inherit; outline: none; font-weight: 500; }
-.item-row .item-price-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
-.item-row .item-price-label { font-size: 11px; color: var(--sub); }
-.item-row input[type=number] { width: 110px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 14px; font-family: inherit; outline: none; text-align: right; font-weight: 600; color: var(--primary); padding: 6px 10px; }
+.item-row { display: flex; flex-direction: column; gap: 0; padding: 0; background: var(--bg); border-radius: var(--rs); border: 1.5px solid var(--border); overflow: hidden; }
+.item-row-top { display: flex; align-items: center; gap: 8px; padding: 12px; }
+.item-row input[type=text] { flex: 1; min-width: 0; border: none; background: none; font-size: 15px; font-family: inherit; outline: none; font-weight: 600; }
+.item-row .item-price-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface); border-top: 1.5px solid var(--border); }
+.item-row .item-price-label { font-size: 12px; color: var(--sub); flex-shrink: 0; white-space: nowrap; }
+.item-row input[type=number] { flex: 1; min-width: 0; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); font-size: 16px; font-family: inherit; outline: none; text-align: right; font-weight: 700; color: var(--primary); padding: 8px 12px; }
 .item-row input[type=number]:focus { border-color: var(--primary); }
+.item-row .item-won-suffix { font-size: 13px; color: var(--sub); flex-shrink: 0; }
 .item-del { color: var(--sub); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
 .add-item-btn { padding: 10px; border: 1.5px dashed var(--border); border-radius: var(--rs); text-align: center; font-size: 13px; color: var(--sub); cursor: pointer; background: none; font-family: inherit; }
 .add-item-btn:active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
@@ -797,21 +798,52 @@ function selectType(t) {
 }
 window.selectType = selectType;
 
-/* ═══ 파일 업로드 ═══ */
-document.getElementById('fileInp').addEventListener('change', function () {
+/* ═══ 파일 업로드 (리사이즈 + 압축) ═══ */
+function resizeImage(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('fileInp').addEventListener('change', async function () {
   const file = this.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    imgB64 = e.target.result.split(',')[1];
-    imgMime = file.type;
-    document.getElementById('prevImg').src = e.target.result;
+  try {
+    showToast('📸 사진 불러오는 중...');
+    // 영수증은 세로로 길어서 최대 변 1600px, 품질 0.85로 압축
+    const dataUrl = await resizeImage(file, 1600, 0.85);
+    imgB64 = dataUrl.split(',')[1];
+    imgMime = 'image/jpeg';
+    document.getElementById('prevImg').src = dataUrl;
     document.getElementById('prevImg').style.display = 'block';
     document.getElementById('uPlaceholder').style.display = 'none';
     document.getElementById('changeBtn').style.display = 'block';
     document.getElementById('ubox').classList.add('has-img');
-  };
-  reader.readAsDataURL(file);
+  } catch (e) {
+    showToast('사진을 불러오지 못했어. 다시 시도해줘');
+  }
 });
 
 /* ═══ 네이버 지도 ═══ */
@@ -892,11 +924,15 @@ async function startAnalysis() {
   setTimeout(() => pf.style.width = '100%', 30);
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
     const res = await fetch(`${API_BASE}/api/ocr-receipt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: imgB64, mime: imgMime })
+      body: JSON.stringify({ image: imgB64, mime: imgMime }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     const data = await res.json();
     ov.classList.remove('on'); pf.style.width = '0';
 
@@ -910,7 +946,8 @@ async function startAnalysis() {
     document.getElementById('itemsCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (e) {
     ov.classList.remove('on'); pf.style.width = '0';
-    showToast('분석 실패: ' + e.message + ' — 직접 추가해줘');
+    const msg = e.name === 'AbortError' ? '분석이 너무 오래 걸려서 중단했어' : '분석 실패: ' + e.message;
+    showToast(msg + ' — 직접 추가해줘');
     items = [];
     renderItems();
     document.getElementById('itemsCard').style.display = 'flex';
@@ -930,6 +967,7 @@ function renderItems() {
       <div class="item-price-row">
         <span class="item-price-label">가격</span>
         <input type="number" inputmode="numeric" value="${it.price}" onchange="updateItem('${it.id}','price',this.value)">
+        <span class="item-won-suffix">원</span>
       </div>
     </div>`).join('');
   updateTotal();
