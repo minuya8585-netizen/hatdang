@@ -3,9 +3,9 @@ const CACHE = 'haetdang-v1';
 
 /* 오프라인에서도 쓸 파일들 */
 const PRECACHE = [
-  './haetdang_webapp.html',
+  './index.html',
   './manifest.json',
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Gowun+Dodum&display=swap'
+  'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Gowun+Dodum&display=swap'
 ];
 
 /* ─── 설치: 핵심 파일 미리 캐시 ─── */

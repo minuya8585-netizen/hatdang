@@ -1,8 +1,8 @@
 {
-  "name": "햇당 — 기억 보조 비서",
+  "name": "햇당 — 영수증 엔빵 정산",
   "short_name": "햇당",
-  "description": "넌 찍기만 해, 기억은 내가 할게",
-  "start_url": "./haetdang_webapp.html",
+  "description": "찍고, 보내고, 끝 — 영수증 한 장으로 모임 정산",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -23,6 +23,6 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["lifestyle", "utilities"],
+  "categories": ["finance", "utilities"],
   "screenshots": []
 }
